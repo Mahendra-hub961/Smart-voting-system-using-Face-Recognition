@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Track Registration & Vote Status</h2>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <p class="muted">Enter your Aadhaar number to check your registration status and voting history.</p>
+  <form method="post" novalidate>
+    <div class="form-group">
+      <label for="aadhaar">Aadhaar Number</label>
+      <input type="text" id="aadhaar" name="aadhaar" pattern="[0-9]{12}" maxlength="12" placeholder="Enter 12-digit Aadhaar number" required aria-describedby="aadhaar-help">
+      <small id="aadhaar-help" class="muted">Your privacy is protected. This information is used only for verification.</small>
+    </div>
+    
+    <button type="submit" class="success">Track Status</button>
+  </form>
+
+  {% if result %}
+    <div class="status-section">
+      <h3>Registration Details</h3>
+      <div class="status-grid">
+        <div class="status-item">
+          <strong>Name:</strong> {{ result.name }}
+        </div>
+        <div class="status-item">
+          <strong>Aadhaar:</strong> {{ result.aadhaar }}
+        </div>
+        <div class="status-item">
+          <strong>Registration Status:</strong>
+          <span class="badge {% if result.approved %}success{% else %}warning{% endif %}">
+            {% if result.approved %}Approved{% else %}Pending Approval{% endif %}
+          </span>
+        </div>
+        <div class="status-item">
+          <strong>Voting Status:</strong>
+          <span class="badge {% if result.voted %}danger{% else %}success{% endif %}">
+            {% if result.voted %}Already Voted{% else %}Eligible to Vote{% endif %}
+          </span>
+        </div>
+      </div>
+      
+      {% if result.photo %}
+      <div class="status-item">
+        <strong>Photo:</strong>
+        <img src="{{ url_for('static', filename='voter_photos/' ~ result.photo) }}" width="120" alt="Voter photo" style="border-radius: 8px; border: 1px solid var(--border);">
+      </div>
+      {% endif %}
+      
+      <div class="documents-section">
+        {% if result.aadhaar_doc %}
+        <div class="document-item">
+          <strong>Aadhaar Document:</strong>
+          <a href="{{ url_for('serve_doc', filename=result.aadhaar_doc) }}" target="_blank" class="btn secondary">View Document</a>
+        </div>
+        {% endif %}
+        {% if result.voterid_doc %}
+        <div class="document-item">
+          <strong>Voter ID Document:</strong>
+          <a href="{{ url_for('serve_doc', filename=result.voterid_doc) }}" target="_blank" class="btn secondary">View Document</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

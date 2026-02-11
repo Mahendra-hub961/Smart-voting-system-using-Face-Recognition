@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Voting | Register</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: "Segoe UI", Poppins, sans-serif;
+    background:
+        radial-gradient(circle at center, rgba(0,120,255,0.15), rgba(0,0,0,0.85)),
+        url("{{ url_for('static', filename='images/biometric_bg.png') }}");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.register-card {
+    width: 100%;
+    max-width: 600px;
+    padding: 2.2rem;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    box-shadow:
+        0 0 30px rgba(0,153,255,0.35),
+        0 30px 60px rgba(0,0,0,0.45);
+    animation: fadeUp 1.1s ease;
+}
+
+.register-card h2 {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #0b2d5c;
+}
+
+.form-control,
+.form-select {
+    border-radius: 8px;
+    height: 45px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #1e90ff;
+    box-shadow: 0 0 10px rgba(30,144,255,0.6);
+}
+
+.captcha-img {
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.error-msg {
+    color: #d90000;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.btn-register {
+    height: 48px;
+    font-weight: 600;
+    font-size: 1.05rem;
+    background: linear-gradient(135deg, #0d6efd, #00b4ff);
+    border: none;
+    border-radius: 10px;
+}
+
+.btn-register:hover {
+    background: linear-gradient(135deg, #004aad, #008cff);
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(25px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="register-card">
+
+    <h2>Voter Registration</h2>
+
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" id="registerForm">
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="name"
+                       placeholder="Full Name *"
+                       value="{{ name or '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+                <input type="email" class="form-control" name="email"
+                       placeholder="Email *"
+                       value="{{ email or '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+                <input type="tel" class="form-control" name="mobile"
+                       placeholder="Mobile Number *"
+                       maxlength="10" pattern="[0-9]{10}"
+                       value="{{ mobile or '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+                <input type="number" class="form-control" name="age"
+                       placeholder="Age *" min="18" max="120"
+                       value="{{ age or '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+                <select class="form-select" name="country" required>
+                    <option value="India" {% if country=='India' %}selected{% endif %}>India</option>
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <select class="form-select" name="state" required>
+                    <option disabled selected>State *</option>
+                    {% set states = [
+                        "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
+                        "Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
+                        "Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland",
+                        "Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
+                        "Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Other"
+                    ] %}
+                    {% for s in states %}
+                    <option value="{{ s }}" {% if state==s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12">
+                <input type="text" class="form-control"
+                       name="constituency"
+                       placeholder="Constituency / Assembly *"
+                       value="{{ constituency or '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+                <input type="text" class="form-control"
+                       name="aadhaar"
+                       placeholder="Aadhaar Number *"
+                       maxlength="12" pattern="[0-9]{12}"
+                       value="{{ aadhaar or '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+                <input type="text" class="form-control"
+                       name="voter_id_number"
+                       placeholder="Voter ID Number *"
+                       value="{{ voter_id_number or '' }}" required>
+            </div>
+
+            <div class="col-md-6">
+                <input type="file" class="form-control"
+                       name="voter_id_file"
+                       accept=".png,.jpg,.jpeg,.pdf" required>
+            </div>
+
+            <div class="col-md-6">
+                <input type="file" class="form-control"
+                       name="aadhaar_file"
+                       accept=".png,.jpg,.jpeg,.pdf" required>
+            </div>
+
+            <!-- OTP METHOD SELECTION -->
+            <div class="col-12 mb-3">
+                <label class="form-label">OTP Delivery Method *</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="otp_method" id="smsOption" value="sms" {% if otp_method=='sms' or otp_method is not defined %}checked{% endif %}>
+                    <label class="form-check-label" for="smsOption">SMS</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="otp_method" id="callOption" value="call" {% if otp_method=='call' %}checked{% endif %}>
+                    <label class="form-check-label" for="callOption">Voice Call</label>
+                </div>
+            </div>
+
+            <div class="col-12 text-center">
+                <img src="{{ url_for('captcha') }}"
+                     class="captcha-img"
+                     id="captchaImage"
+                     title="Click to refresh CAPTCHA">
+            </div>
+
+            <div class="col-12">
+                <input type="text" class="form-control"
+                       name="captcha"
+                       placeholder="Enter CAPTCHA *"
+                       required>
+            </div>
+
+            <div class="col-12">
+                <button type="submit"
+                        class="btn btn-register w-100">
+                    Register
+                </button>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+document.getElementById('captchaImage').onclick = function () {
+    this.src = "{{ url_for('captcha') }}?" + Date.now();
+};
+</script>
+
+</body>
+</html>

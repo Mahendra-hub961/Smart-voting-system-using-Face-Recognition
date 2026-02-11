@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h1>Election Results</h1>
+
+<h3>Total Votes: {{ total_votes }}</h3>
+
+<table border="1" width="50%">
+<tr><th>Candidate</th><th>Votes</th></tr>
+{% for c in vote_counts %}
+<tr>
+    <td>{{ c }}</td>
+    <td>{{ vote_counts[c] }}</td>
+</tr>
+{% endfor %}
+</table>
+
+</body>
+</html>

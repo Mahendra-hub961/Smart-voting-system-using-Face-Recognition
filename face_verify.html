@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Face Verification | Smart Voting</title>
+
+<link rel="stylesheet" href="/static/gov.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body {
+    background: url('/static/images/vote_bg.png') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.verify-card {
+    max-width: 800px;
+    margin: 50px auto;
+    background: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    padding: 30px;
+    text-align: center;
+    position: relative;
+}
+
+#quality-container {
+    width: 100%;
+    height: 25px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+#quality-bar {
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease-in-out, background 0.3s ease-in-out;
+    border-radius: 12px;
+    text-align: center;
+    line-height: 25px;
+    font-weight: bold;
+    color: #000;
+}
+
+.camera-wrapper {
+    position: relative;
+    width: 720px;
+    height: 540px;
+    margin: 20px auto;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 15px;
+}
+
+#overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+}
+
+.gov-watermark {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 3;
+    opacity: 0.25;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.chakra {
+    width: 50px;
+    height: 50px;
+    border: 3px solid #0a3d91;
+    border-radius: 50%;
+    position: relative;
+}
+
+.chakra::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 2px dashed #0a3d91;
+    border-radius: 50%;
+}
+
+.gov-text {
+    font-weight: 700;
+    font-size: 13px;
+    color: #0a3d91;
+    text-align: right;
+    line-height: 1.1;
+}
+
+.gov-text span {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.tri-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    display: flex;
+    z-index: 4;
+}
+
+.tri-bar .saffron { background: #ff9933; width: 33%; }
+.tri-bar .white   { background: #ffffff; width: 34%; }
+.tri-bar .green   { background: #138808; width: 33%; }
+
+#verifyBtn {
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 12px;
+}
+
+#message {
+    font-weight: 600;
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+#activity-log {
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 10px;
+    font-size: 14px;
+    text-align: left;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <div class="verify-card">
+        <h1 class="mb-2">🔒 Face Verification</h1>
+        <p>Align your face inside the green box and click Verify Face</p>
+
+        <div id="quality-container">
+            <div id="quality-bar">0%</div>
+        </div>
+
+        <div class="camera-wrapper">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="overlay"></canvas>
+
+            <div class="gov-watermark">
+                <div class="chakra"></div>
+                <div class="gov-text">
+                    GOVERNMENT OF INDIA<br>
+                    <span>SMART VOTING SYSTEM</span>
+                </div>
+            </div>
+
+            <div class="tri-bar">
+                <span class="saffron"></span>
+                <span class="white"></span>
+                <span class="green"></span>
+            </div>
+        </div>
+
+        <button id="verifyBtn" class="btn btn-success btn-lg w-100 mt-3 mb-2">
+            Verify Face
+        </button>
+
+        <p id="message"></p>
+        <div id="activity-log"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("overlay");
+const ctx = canvas.getContext("2d");
+const verifyBtn = document.getElementById("verifyBtn");
+const messageEl = document.getElementById("message");
+const qualityBar = document.getElementById("quality-bar");
+const activityLog = document.getElementById("activity-log");
+
+canvas.width = 720;
+canvas.height = 540;
+
+function speakMessage(text) {
+    if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.rate = 1;
+        msg.pitch = 1;
+        speechSynthesis.speak(msg);
+    }
+}
+
+function logActivity(text) {
+    activityLog.textContent = text;
+}
+
+navigator.mediaDevices.getUserMedia({ video: true })
+.then(stream => video.srcObject = stream)
+.catch(() => logActivity("Camera access required"));
+
+// Update quality bar function
+function updateQuality(box, confidence) {
+    let score = 0;
+
+    // Face size (0.12 to 0.35 normalized area)
+    const faceArea = box.width * box.height;
+    if (faceArea > 0.12 && faceArea < 0.35) score += 40;
+
+    // Center alignment
+    const dx = Math.abs(box.xCenter - 0.5);
+    const dy = Math.abs(box.yCenter - 0.5);
+    if (dx < 0.15 && dy < 0.15) score += 25;
+
+    // Confidence
+    score += Math.min(confidence * 35, 35);
+
+    // Brightness / lighting check
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    const tempCtx = tempCanvas.getContext("2d");
+    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+    const frame = tempCtx.getImageData(
+        box.xCenter*video.videoWidth - box.width*video.videoWidth/2,
+        box.yCenter*video.videoHeight - box.height*video.videoHeight/2,
+        box.width*video.videoWidth,
+        box.height*video.videoHeight
+    );
+    let total = 0;
+    for(let i=0; i<frame.data.length; i+=4){
+        total += frame.data[i]*0.299 + frame.data[i+1]*0.587 + frame.data[i+2]*0.114;
+    }
+    const avgBrightness = total / (frame.data.length/4);
+    if(avgBrightness < 50) score -= 15; // too dark warning
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    qualityBar.style.width = score + "%";
+    qualityBar.textContent = score + "%";
+
+    if (score < 40) qualityBar.style.background = "#ff4d4d";
+    else if (score < 70) qualityBar.style.background = "#ffc107";
+    else qualityBar.style.background = "#28a745";
+
+    return score;
+}
+
+const faceDetection = new FaceDetection({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
+});
+faceDetection.setOptions({ model: "short", minDetectionConfidence: 0.6 });
+
+faceDetection.onResults(results => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (results.detections.length === 0) return;
+
+    const detection = results.detections[0];
+    const box = detection.boundingBox;
+    const confidence = detection.score ? detection.score[0] : 0;
+
+    // Draw green rectangle
+    const x = box.xCenter * canvas.width;
+    const y = box.yCenter * canvas.height;
+    const w = box.width * canvas.width;
+    const h = box.height * canvas.height;
+
+    ctx.strokeStyle = "#00ff55";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x - w/2, y - h/2, w, h);
+
+    // Update live quality %
+    updateQuality(box, confidence);
+});
+
+new Camera(video, {
+    onFrame: async () => await faceDetection.send({ image: video }),
+    width: 720,
+    height: 540
+}).start();
+
+function captureAndVerify() {
+    logActivity("Verifying face...");
+    speakMessage("Verifying face");
+
+    const cap = document.createElement("canvas");
+    cap.width = video.videoWidth;
+    cap.height = video.videoHeight;
+    cap.getContext("2d").drawImage(video, 0, 0);
+
+    fetch("/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: cap.toDataURL("image/jpeg") })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            messageEl.innerHTML = "<span class='text-success'>Face verified successfully</span>";
+            speakMessage("Face verified successfully");
+            setTimeout(() => location.href = "/vote", 1000);
+            return;
+        }
+
+        messageEl.innerHTML = `<span class="text-danger">${data.message}</span>`;
+        logActivity(data.message);
+        speakMessage(data.message);
+    })
+    .catch(() => {
+        messageEl.innerHTML = "<span class='text-danger'>Verification failed</span>";
+        speakMessage("Verification failed");
+    });
+}
+
+verifyBtn.onclick = captureAndVerify;
+</script>
+</body>
+</html>

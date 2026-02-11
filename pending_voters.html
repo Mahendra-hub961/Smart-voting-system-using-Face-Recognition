@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pending Voters</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>Pending Registrations</h2>
+
+    {% for v in voters %}
+        <p>
+            {{ v.name }}
+            <a href="/admin/approve/{{ v.id }}" class="btn small">Approve</a>
+            <a href="/admin/delete/{{ v.id }}" class="btn small danger">Delete</a>
+        </p>
+    {% endfor %}
+
+    <a href="/admin/dashboard">Back to Dashboard</a>
+</div>
+
+</body>
+</html>

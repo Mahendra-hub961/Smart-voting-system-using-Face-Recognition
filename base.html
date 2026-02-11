@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Smart Voting{% endblock %}</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gov.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <!-- Header with logo -->
+  <header class="gov-header shadow-sm">
+    <div class="container d-flex align-items-center justify-content-between py-2">
+      <div class="d-flex align-items-center gap-3">
+        <img src="{{ url_for('static', filename='symbols/gov-logo.png') }}" alt="logo" class="gov-logo" height="50">
+        <div>
+          <h1 class="gov-title mb-0">Smart Voting — Project</h1>
+          <div class="gov-sub small">Secure face-based voting (Demo)</div>
+        </div>
+      </div>
+      <div>
+        <a href="{{ url_for('admin_login') }}" class="btn btn-outline-primary btn-sm">Admin</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tricolor stripe -->
+  <nav class="gov-tricolor">
+    <div class="stripe saffron"></div>
+    <div class="stripe white"></div>
+    <div class="stripe green"></div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="container py-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer with India image -->
+  <footer class="text-muted text-center py-3 small">
+    <img src="{{ url_for('static', filename='images/india.png') }}" alt="India" height="40" style="margin-bottom:5px;">
+    <br>© 2025 — Smart Voting Demo. For demonstration / academic use only.
+  </footer>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/gov.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

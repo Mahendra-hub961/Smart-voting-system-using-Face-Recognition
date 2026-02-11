@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head><title>Upload Face</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body>
+<div class="container">
+  <h2>Upload or Capture Face</h2>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="POST" action="/save_face" enctype="multipart/form-data">
+    <input type="hidden" name="voter_id" value="{{ voter_id }}">
+    <p>Upload image file:</p>
+    <input type="file" name="photo" accept="image/*">
+    <p>OR use camera (click below after allowing camera):</p>
+    <video id="video" autoplay style="max-width:100%;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <input type="hidden" id="captured_image" name="captured_image">
+    <div class="row">
+      <button type="button" id="captureBtn">Capture</button>
+      <button type="submit">Save Face</button>
+    </div>
+  </form>
+  <p><a href="/">Home</a></p>
+</div>
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const captureBtn = document.getElementById('captureBtn');
+navigator.mediaDevices.getUserMedia({video:true})
+  .then(s=> video.srcObject=s).catch(()=>{});
+captureBtn.onclick = () => {
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+  document.getElementById('captured_image').value = canvas.toDataURL('image/png');
+  alert('Image captured — now click Save Face');
+};
+</script>
+</body>
+</html>

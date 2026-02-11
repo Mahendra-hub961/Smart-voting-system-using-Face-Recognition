@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard | Smart Voting</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+<!-- Chart.js & XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- PDF Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { font-family:"Segoe UI",sans-serif; background:#eef2f7; }
+.navbar{ background:#0d6efd; box-shadow:0 6px 15px rgba(0,0,0,.2);}
+.navbar-brand, .nav-link{ color:#fff!important; font-weight:600;}
+.btn{border-radius:25px;}
+.card{border-radius:15px; box-shadow:0 8px 20px rgba(0,0,0,.1);}
+.table th{background:#0d6efd; color:#fff;}
+.table tr:hover{background:rgba(13,110,253,.05);}
+.sidebar{background:#063a8f; min-height:100vh; color:#fff; padding-top:20px;}
+.sidebar a{display:block; color:#fff; padding:10px 20px; text-decoration:none; margin-bottom:5px; border-radius:10px;}
+.sidebar a:hover{background:#0b2447;}
+.search-box{margin-bottom:10px;}
+.hidden{display:none;}
+.audit li{padding:6px 0; border-left:3px solid #0d6efd; padding-left:12px; margin-left:5px;}
+
+/* Chart container heights */
+#voteChartContainer { height: 300px; }
+#pieChartContainer { height: 250px; }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg px-4">
+    <span class="navbar-brand"><i class="bi bi-shield-check"></i> Smart Voting Admin</span>
+    <div class="ms-auto">
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger btn-sm"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    </div>
+</nav>
+
+<div class="container-fluid">
+<div class="row">
+
+    <!-- SIDEBAR -->
+    <div class="col-md-2 sidebar">
+        <a href="#dashboardSection"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a>
+        <a href="#pendingVoters"><i class="bi bi-hourglass-split me-2"></i> Pending Voters</a>
+        <a href="#allVoters"><i class="bi bi-people-fill me-2"></i> Voters Who Voted</a>
+        <a href="#voteCountsSection"><i class="bi bi-list-check me-2"></i> Votes per Party</a>
+        <a href="#auditSection"><i class="bi bi-journal-text me-2"></i> Audit Log</a>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="col-md-10">
+
+        <!-- CONTROLS -->
+        <div class="card mb-4 p-3 d-flex justify-content-between flex-wrap">
+            <div class="d-flex gap-2 mb-2">
+                <button class="btn btn-dark btn-sm" onclick="toggleResults()"><i class="bi bi-lock"></i> Lock / Unlock Results</button>
+                <button class="btn btn-success btn-sm" onclick="exportVotes()"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+                <button class="btn btn-primary btn-sm" onclick="exportPDF()"><i class="bi bi-file-earmark-pdf"></i> Export PDF</button>
+            </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dashboardSection" class="row mb-4">
+            <div class="col-md-4 mb-2">
+                <div class="card text-center p-3">
+                    <i class="bi bi-people fs-2 text-success"></i>
+                    <h6 class="mt-2">Approved Voters</h6>
+                    <h3 class="text-success">{{ total_voters }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="card text-center p-3">
+                    <i class="bi bi-check2-circle fs-2 text-primary"></i>
+                    <h6 class="mt-2">Total Votes</h6>
+                    <h3 class="text-primary">{{ total_votes }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="card text-center p-3">
+                    <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+                    <h6 class="mt-2">Pending Voters</h6>
+                    <h3 class="text-warning">{{ pending_voters|length }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="card mb-4" id="resultsSection">
+            <div class="card-header"><i class="bi bi-bar-chart"></i> Vote Analytics</div>
+            <div class="card-body">
+                <div id="voteChartContainer">
+                    <canvas id="voteChart"></canvas>
+                </div>
+                <div id="pieChartContainer" class="mt-3">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- VOTES PER PARTY -->
+        <div id="voteCountsSection" class="card mb-4">
+            <div class="card-header"><i class="bi bi-list-check"></i> Total Votes Per Party</div>
+            <div class="card-body table-responsive">
+                <table class="table table-bordered">
+                    <thead><tr><th>Party</th><th>Total Votes</th></tr></thead>
+                    <tbody>
+                    {% for party, count in vote_counts.items() %}
+                        <tr><td>{{ party }}</td><td>{{ count }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PENDING VOTERS -->
+        <div id="pendingVoters" class="card mb-4">
+            <div class="card-header"><i class="bi bi-hourglass-split"></i> Pending Approvals</div>
+            <div class="card-body table-responsive">
+                {% if pending_voters %}
+                <input type="text" class="form-control search-box" placeholder="Search Pending Voters" onkeyup="filterTable('pendingTable', this.value)">
+                <table class="table table-bordered" id="pendingTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Aadhaar</th>
+                            <th>Voter ID</th>
+                            <th>State</th>
+                            <th>Constituency</th>
+                            <th>Photo</th>
+                            <th>Documents</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for voter in pending_voters %}
+                        <tr>
+                            <td>{{ voter.name }}</td>
+                            <td>{{ voter.email }}</td>
+                            <td>{{ voter._masked_aadhaar }}</td>
+                            <td>{{ voter.voter_id_number }}</td>
+                            <td>{{ voter.state }}</td>
+                            <td>{{ voter.constituency }}</td>
+                            <td>{% if voter.photo_filename %}<img src="{{ url_for('serve_voter_photo', filename=voter.photo_filename) }}" width="50">{% endif %}</td>
+                            <td>
+                                {% if voter.voter_id_filename %}<a href="{{ url_for('serve_id_upload', filename=voter.voter_id_filename) }}" target="_blank">Voter ID</a><br>{% endif %}
+                                {% if voter.aadhaar_filename %}<a href="{{ url_for('serve_aadhaar_upload', filename=voter.aadhaar_filename) }}" target="_blank">Aadhaar</a>{% endif %}
+                            </td>
+                            <td>
+                                <form action="{{ url_for('admin_approve', voter_id=voter.id) }}" method="POST" style="display:inline;"><button class="btn btn-success btn-sm">Approve</button></form>
+                                <form action="{{ url_for('admin_reject', voter_id=voter.id) }}" method="POST" style="display:inline;"><button class="btn btn-danger btn-sm">Reject</button></form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<p>No pending voters.</p>{% endif %}
+            </div>
+        </div>
+
+        <!-- VOTERS WHO VOTED -->
+        <div id="allVoters" class="card mb-4">
+            <div class="card-header"><i class="bi bi-people-fill"></i> Voters Who Voted</div>
+            <div class="card-body table-responsive">
+                {% set voted_voters = voters | selectattr('voted') | list %}
+                {% if voted_voters %}
+                <input type="text" class="form-control search-box" placeholder="Search Voted Voters" onkeyup="filterTable('allVotersTable', this.value)">
+                <table class="table table-bordered" id="allVotersTable">
+                    <thead>
+                        <tr>
+                            <th>Photo</th><th>Name</th><th>Email</th><th>Masked Aadhaar</th><th>Voter ID</th><th>Documents</th><th>State</th><th>Constituency</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for voter in voted_voters %}
+                        <tr>
+                            <td>{% if voter.photo_filename %}<img src="{{ url_for('serve_voter_photo', filename=voter.photo_filename) }}" width="60" class="rounded">{% else %}N/A{% endif %}</td>
+                            <td>{{ voter.name }}</td>
+                            <td>{{ voter.email }}</td>
+                            <td>{{ voter.aadhaar | replace(voter.aadhaar[:8],'XXXX-XXXX') }}</td>
+                            <td>{{ voter.voter_id_number }}</td>
+                            <td>
+                                {% if voter.voter_id_filename %}<a href="{{ url_for('serve_id_upload', filename=voter.voter_id_filename) }}" target="_blank">Voter ID</a><br>{% endif %}
+                                {% if voter.aadhaar_filename %}<a href="{{ url_for('serve_aadhaar_upload', filename=voter.aadhaar_filename) }}" target="_blank">Aadhaar</a>{% endif %}
+                            </td>
+                            <td>{{ voter.state }}</td>
+                            <td>{{ voter.constituency }}</td>
+                            <td>
+                                {% if voter.votes %}<form action="{{ url_for('admin_delete_vote', vote_id=voter.votes[0].id) }}" method="POST">
+                                    <button class="btn btn-warning btn-sm">Delete Vote</button></form>{% else %}N/A{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<p>No voters have voted yet.</p>{% endif %}
+            </div>
+        </div>
+
+        <!-- AUDIT LOG -->
+        <div id="auditSection" class="card mb-5">
+            <div class="card-header"><i class="bi bi-journal-text"></i> Admin Audit Log</div>
+            <div class="card-body">
+                <ul id="auditLog" class="audit list-unstyled"></ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+</div>
+
+<script>
+// CHARTS
+const voteChart = new Chart(document.getElementById('voteChart'),{
+    type:'bar',
+    data:{
+        labels: {{ vote_counts.keys()|list|safe }},
+        datasets:[{label:'Votes', data: {{ vote_counts.values()|list|safe }}, backgroundColor:'#0d6efd', borderRadius:8}]
+    },
+    options:{
+        maintainAspectRatio: false,
+        plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true}}
+    }
+});
+
+const pieChart = new Chart(document.getElementById('pieChart'),{
+    type:'pie',
+    data:{
+        labels: {{ vote_counts.keys()|list|safe }},
+        datasets:[{data: {{ vote_counts.values()|list|safe }}, backgroundColor:['#0d6efd','#198754','#ffc107','#dc3545','#6f42c1','#fd7e14','#20c997','#0dcaf0','#6610f2','#e83e8c','#adb5bd','#495057']}]
+    },
+    options:{ maintainAspectRatio: false }
+});
+
+// FUNCTIONS
+function toggleResults(){ document.getElementById('resultsSection').classList.toggle('hidden'); logAction("Results toggled"); }
+
+function exportVotes(){ 
+    const wb=XLSX.utils.book_new(); 
+    const ws=XLSX.utils.table_to_sheet(document.getElementById('allVotersTable')); 
+    XLSX.utils.book_append_sheet(wb,ws,"Votes"); 
+    XLSX.writeFile(wb,"votes.xlsx"); 
+    logAction("Votes exported");
+}
+
+// Export PDF with party-wise summary
+function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    pdf.setFontSize(14);
+    pdf.text("Vote Summary by Party", 40, 40);
+
+    const parties = {{ vote_counts.keys()|list|safe }};
+    const counts = {{ vote_counts.values()|list|safe }};
+    
+    let y = 70;
+    parties.forEach((party, index) => {
+        pdf.text(`${party}: ${counts[index]}`, 50, y);
+        y += 25;
+    });
+
+    pdf.save("vote_summary.pdf");
+    logAction("Vote summary exported as PDF");
+}
+
+function logAction(msg){ 
+    const li=document.createElement("li"); 
+    li.innerText=new Date().toLocaleString()+" — "+msg; 
+    document.getElementById('auditLog').prepend(li); 
+}
+
+function filterTable(tableId, query){ 
+    const q=query.toLowerCase(); 
+    document.querySelectorAll('#'+tableId+' tbody tr').forEach(r=>{
+        r.style.display=r.innerText.toLowerCase().includes(q)?'':'none'; 
+    }); 
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

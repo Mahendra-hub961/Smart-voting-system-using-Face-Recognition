@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Verify Face{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card card-official p-4 text-center">
+      <h4>Face Verification</h4>
+      <p class="small text-muted">Allow camera, capture and we'll verify your face against the approved registry.</p>
+
+      <video id="video" autoplay playsinline style="width:100%; max-width:640px; border-radius:6px; border:1px solid #ddd"></video>
+      <canvas id="canvas" width="640" height="480" style="display:none"></canvas>
+
+      <div class="mt-3">
+        <button id="verifyBtn" class="btn btn-primary">Capture & Verify</button>
+        <a class="btn btn-link" href="{{ url_for('index') }}">Cancel</a>
+      </div>
+
+      <div id="status" class="mt-3"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function(){
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const btn = document.getElementById('verifyBtn');
+  const status = document.getElementById('status');
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }});
+    video.srcObject = stream;
+  } catch(e) {
+    status.innerHTML = '<div class="alert alert-warning">Camera not available.</div>';
+    return;
+  }
+
+  btn.onclick = async () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+    status.innerHTML = '<div class="spinner-border" role="status"></div> Verifying...';
+    try {
+      const resp = await fetch('{{ url_for("verify") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl })
+      });
+      const j = await resp.json();
+      if (j.status === 'success') {
+        status.innerHTML = '<div class="alert alert-success">' + j.message + '</div>';
+        setTimeout(()=>{ window.location.href = '{{ url_for("vote") }}'; }, 900);
+      } else {
+        status.innerHTML = '<div class="alert alert-danger">' + j.message + '</div>';
+      }
+    } catch(e) {
+      status.innerHTML = '<div class="alert alert-danger">Network error.</div>';
+    }
+  };
+})();
+</script>
+{% endblock %}

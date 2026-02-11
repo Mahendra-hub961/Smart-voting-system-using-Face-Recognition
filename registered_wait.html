@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Registration Successful - Smart Voting System</title>
+
+    <link rel="stylesheet" href="/static/gov.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-5 text-center">
+
+    <!-- Header -->
+    <div class="gov-header d-flex align-items-center justify-content-center mb-3">
+        <h1 class="gov-title mb-0">Smart Voting System</h1>
+    </div>
+
+    <div class="gov-tricolor mb-4">
+        <div class="stripe saffron"></div>
+        <div class="stripe white"></div>
+        <div class="stripe green"></div>
+    </div>
+
+    <div class="card card-official p-4 mx-auto shadow" style="max-width:500px;">
+        <h3 class="mb-3 text-success">Registration Successful!</h3>
+
+        <p class="fw-semibold">
+            Your account is <strong>pending admin approval</strong>.
+        </p>
+
+        <p>
+            You will be able to vote once your registration is approved.
+        </p>
+
+        <a href="/" class="btn btn-primary mt-3">Go to Home</a>
+    </div>
+
+</div>
+
+<script>
+// --------- ENGLISH MALE VOICE ----------
+function speak(text) {
+    window.speechSynthesis.cancel();
+
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = "en-US";
+    msg.rate = 0.95;
+    msg.pitch = 0.8;
+
+    const voices = speechSynthesis.getVoices();
+    const maleVoice =
+        voices.find(v => v.lang === "en-US" && v.name.toLowerCase().includes("male")) ||
+        voices.find(v => v.lang === "en-US");
+
+    if (maleVoice) msg.voice = maleVoice;
+
+    speechSynthesis.speak(msg);
+}
+
+speechSynthesis.onvoiceschanged = () => {};
+
+// Speak on page load
+window.onload = () => {
+    speak(
+        "Registration successful. Please wait for admin approval. " +
+        "You will be able to vote once approved. Thank you."
+    );
+};
+</script>
+
+</body>
+</html>

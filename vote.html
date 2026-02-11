@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vote - Smart Voting System</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+<style>
+body {
+    background: #f0f2f5;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.container {
+    max-width: 900px;
+    margin-top: 50px;
+}
+
+/* HEADER */
+.gov-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+}
+.gov-logo {
+    width: 60px;
+}
+.gov-title {
+    font-size: 28px;
+    font-weight: bold;
+}
+.gov-sub {
+    font-size: 16px;
+    color: #555;
+}
+
+/* PARTY GRID */
+.party-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 20px;
+}
+
+/* PARTY CARD */
+.party-card {
+    background: linear-gradient(145deg, #ffffff, #f1f3f6);
+    border-radius: 18px;
+    text-align: center;
+    padding: 22px 15px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: 
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        background 0.25s ease;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.party-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+}
+
+.party-card:active {
+    transform: scale(0.97);
+}
+
+/* SELECTED EFFECT */
+.party-card.selected {
+    background: linear-gradient(145deg, #eaf2ff, #ffffff);
+    box-shadow: 
+        0 0 0 3px rgba(13,110,253,0.35),
+        0 12px 30px rgba(13,110,253,0.25);
+    animation: pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    from {
+        box-shadow:
+            0 0 0 3px rgba(13,110,253,0.35),
+            0 10px 26px rgba(13,110,253,0.22);
+    }
+    to {
+        box-shadow:
+            0 0 0 4px rgba(13,110,253,0.55),
+            0 14px 34px rgba(13,110,253,0.35);
+    }
+}
+
+.party-card img {
+    width: 80px;
+    margin-bottom: 10px;
+    transition: transform 0.25s ease;
+}
+
+.party-card:hover img {
+    transform: scale(1.08);
+}
+
+.party-card input {
+    display: none;
+}
+
+/* SUBMIT BUTTON */
+#submitBtn {
+    margin-top: 35px;
+    width: 220px;
+}
+
+/* THANK YOU MESSAGE */
+#thankYou {
+    display: none;
+    font-size: 22px;
+    text-align: center;
+    margin-top: 40px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="gov-header">
+        <img src="/static/logo.png" class="gov-logo" alt="Logo">
+        <div class="ms-3">
+            <h1 class="gov-title mb-0">Smart Voting System</h1>
+            <p class="gov-sub mb-0">Tap to select your candidate</p>
+        </div>
+    </div>
+
+    <!-- VOTING FORM -->
+    <form method="POST" id="voteForm">
+        <div class="party-grid">
+            {% for c in candidates %}
+            <div class="party-card" onclick="selectCandidate('{{ c.name }}', this)">
+                <img src="/static/symbols/{{ c.symbol }}" alt="{{ c.name }}">
+                <div class="fw-semibold">{{ c.name }}</div>
+                <input type="radio" name="candidate" value="{{ c.name }}">
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                Submit Vote
+            </button>
+        </div>
+    </form>
+
+    <!-- THANK YOU -->
+    <div id="thankYou" class="alert alert-success">
+        ✅ Your vote has been recorded.<br>
+        Thank you for voting.
+    </div>
+
+</div>
+
+<script>
+// Voice feedback
+function speak(text) {
+    speechSynthesis.cancel();
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = "en-US";
+    msg.rate = 0.95;
+    speechSynthesis.speak(msg);
+}
+
+// Candidate select
+function selectCandidate(name, card) {
+    document.querySelectorAll(".party-card").forEach(c => {
+        c.classList.remove("selected");
+    });
+
+    card.classList.add("selected");
+    card.querySelector("input").checked = true;
+
+    if (navigator.vibrate) navigator.vibrate(40);
+}
+
+// Submit vote
+document.getElementById("voteForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const selected = document.querySelector("input[name='candidate']:checked");
+    if (!selected) {
+        alert("Please select a candidate");
+        speak("Please select a candidate");
+        return;
+    }
+
+    // send vote to backend
+    fetch("/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "candidate=" + encodeURIComponent(selected.value)
+    });
+
+    // UI feedback
+    document.getElementById("voteForm").style.display = "none";
+    document.getElementById("thankYou").style.display = "block";
+    speak("Your vote has been recorded. Thank you for voting.");
+
+    // Redirect back to face verification
+    setTimeout(() => {
+        window.location.href = "/face_verify";
+    }, 2000);
+});
+</script>
+
+</body>
+</html>
