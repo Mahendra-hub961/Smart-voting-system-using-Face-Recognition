@@ -1,0 +1,45 @@
+/* gov.css - Government style theme (clean official look) */
+:root{
+  --accent:#0072bc; /* deep blue */
+  --saffron:#ff9933;
+  --green:#138808;
+  --muted:#6c757d;
+  --card-bg:#ffffff;
+}
+body{
+  background: #f6f8fa;
+  font-family: "Segoe UI", "Noto Sans", Arial, sans-serif;
+  color: #1d2935;
+}
+.gov-header{
+  background: #fff;
+  border-radius: 6px;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  padding: 8px 12px;
+}
+.gov-logo{ height:48px; width:auto; }
+.gov-title{ font-size:18px; margin:0; color:var(--accent); }
+.gov-sub{ color:var(--muted); }
+
+.gov-tricolor { height:6px; border-radius:4px; overflow:hidden; margin-bottom:18px; }
+.gov-tricolor .stripe{ float:left; height:6px; }
+.gov-tricolor .saffron{ width:33.33%; background:var(--saffron); }
+.gov-tricolor .white{ width:33.33%; background:#fff; }
+.gov-tricolor .green{ width:33.33%; background:var(--green); }
+
+.card-official{ background:var(--card-bg); border-radius:8px; box-shadow: 0 6px 16px rgba(20,30,50,0.04); border:1px solid rgba(10,20,30,0.03); }
+
+.party-box{ border:1px solid rgba(0,0,0,0.04); background:#fff; border-radius:6px; padding:10px; min-height:90px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.party-logo{ max-height:48px; object-fit:contain; }
+
+.btn-primary{ background:var(--accent); border:0; }
+.btn-outline-primary{ border-color:var(--accent); color:var(--accent); }
+.small{ font-size:0.9rem; }
+
+.party-option{ border-radius:8px; background:#fff; border:1px solid rgba(0,0,0,0.03); padding:12px; }
+.table-sm th, .table-sm td{ vertical-align:middle; }
+
+@media (max-width:576px){
+  .gov-title{ font-size:16px; }
+}
